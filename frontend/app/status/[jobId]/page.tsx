@@ -1,13 +1,14 @@
 import StatusPoller from "@/components/StatusPoller";
 
-export default function StatusPage({
+export default async function StatusPage({
   params,
 }: {
-  params: { jobId: string };
+  params: Promise<{ jobId: string }>;
 }) {
+  const { jobId } = await params;
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-6">
-      <StatusPoller jobId={params.jobId} />
+      <StatusPoller jobId={jobId} />
     </div>
   );
 }

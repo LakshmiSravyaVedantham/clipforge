@@ -19,6 +19,18 @@ export default function StatusPoller({ jobId }: { jobId: string }) {
     const poll = async () => {
       try {
         const res = await fetch(`${API}/status/${jobId}`);
+        if (!res.ok) {
+          if (!cancelled) {
+            setData({
+              job_id: jobId,
+              status: "failed",
+              progress: 0,
+              stage: "failed",
+              error: `Server error: ${res.status}`,
+            });
+          }
+          return;
+        }
         const json: StatusData = await res.json();
         if (!cancelled) {
           setData(json);

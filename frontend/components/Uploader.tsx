@@ -13,6 +13,7 @@ export default function Uploader() {
 
   const handleFile = useCallback(
     async (file: File) => {
+      if (uploading) return;
       if (!file.type.startsWith("video/")) {
         setError("Please upload a video file (mp4, mov, mkv).");
         return;
@@ -38,7 +39,7 @@ export default function Uploader() {
         setUploading(false);
       }
     },
-    [router]
+    [router, uploading]
   );
 
   const onDrop = (e: React.DragEvent) => {
