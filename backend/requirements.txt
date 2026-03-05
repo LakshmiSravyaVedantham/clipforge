@@ -4,5 +4,6 @@ python-multipart==0.0.9
 scenedetect[opencv]==0.6.4
 moviepy==1.0.3
 librosa==0.10.2
+setuptools>=68.0.0
 openai-whisper==20231117
 aiofiles==23.2.1
