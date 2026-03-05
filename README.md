@@ -5,6 +5,9 @@
 [![CI](https://github.com/LakshmiSravyaVedantham/clipforge/actions/workflows/ci.yml/badge.svg)](https://github.com/LakshmiSravyaVedantham/clipforge/actions/workflows/ci.yml)
 [![Deploy](https://github.com/LakshmiSravyaVedantham/clipforge/actions/workflows/deploy.yml/badge.svg)](https://github.com/LakshmiSravyaVedantham/clipforge/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://frontend-kohl-six-74.vercel.app)
+
+**[Try it live →](https://frontend-kohl-six-74.vercel.app)**
 
 ---
 
