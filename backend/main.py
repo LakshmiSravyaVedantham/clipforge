@@ -5,7 +5,7 @@ import asyncio
 import logging
 import tempfile
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import aiofiles
@@ -26,13 +26,13 @@ _cleanup_registry: dict[str, tuple[datetime, Path]] = {}
 
 
 def register_for_cleanup(job_id: str, zip_path: Path) -> None:
-    _cleanup_registry[job_id] = (datetime.utcnow() + timedelta(hours=1), zip_path)
+    _cleanup_registry[job_id] = (datetime.now(timezone.utc) + timedelta(hours=1), zip_path)
 
 
 async def cleanup_loop() -> None:
     while True:
         await asyncio.sleep(300)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = [jid for jid, (exp, _) in _cleanup_registry.items() if now > exp]
         for jid in expired:
             _, path = _cleanup_registry.pop(jid)
@@ -63,21 +63,35 @@ def health():
 @app.post("/upload")
 async def upload_video(file: UploadFile, background_tasks: BackgroundTasks):
     """Accept a gameplay video, enqueue processing job."""
+    # NOTE: _jobs dict is not thread-safe; safe for single-worker uvicorn only (I1)
+    # TODO v2: validate with ffprobe before enqueueing (I3)
+    import uuid as _uuid
+
     if file.content_type not in ("video/mp4", "video/quicktime", "video/x-matroska"):
         raise HTTPException(400, "Unsupported file type. Upload mp4, mov, or mkv.")
 
-    job = create_job()
-    suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
-    dest = UPLOAD_DIR / f"{job.job_id}_input{suffix}"
+    # Whitelist suffix (Fix I4)
+    raw_suffix = Path(file.filename or "").suffix.lower()
+    suffix = {".mp4": ".mp4", ".mov": ".mov", ".mkv": ".mkv"}.get(raw_suffix, ".mp4")
 
-    async with aiofiles.open(dest, "wb") as f:
-        size = 0
-        while chunk := await file.read(1024 * 1024):
-            size += len(chunk)
-            if size > MAX_SIZE_BYTES:
-                dest.unlink(missing_ok=True)
-                raise HTTPException(413, "File exceeds 500MB limit.")
-            await f.write(chunk)
+    # Stream to temp file before creating job (Fix I2)
+    tmp_path = UPLOAD_DIR / f"tmp_{_uuid.uuid4()}{suffix}"
+    try:
+        async with aiofiles.open(tmp_path, "wb") as f:
+            size = 0
+            while chunk := await file.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_SIZE_BYTES:
+                    raise HTTPException(413, "File exceeds 500MB limit.")
+                await f.write(chunk)
+    except HTTPException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+    # Only create job after successful upload
+    job = create_job()
+    dest = UPLOAD_DIR / f"{job.job_id}_input{suffix}"
+    tmp_path.rename(dest)
 
     update_job(job.job_id, input_path=dest)
     background_tasks.add_task(run_pipeline, job.job_id)
