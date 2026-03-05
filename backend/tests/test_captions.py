@@ -66,3 +66,11 @@ def test_transcribe_segment_empty_segments():
         result = transcribe_segment(Path("fake.mp4"), 0.0, 5.0)
 
     assert result == []
+
+
+def test_transcribe_segment_handles_model_load_failure():
+    """If _get_model() raises (e.g. model download fails), return [] gracefully."""
+    with patch("pipeline.captions._get_model", side_effect=RuntimeError("download failed")):
+        from pipeline.captions import transcribe_segment
+        result = transcribe_segment(Path("fake.mp4"), 0.0, 5.0)
+    assert result == []

@@ -35,8 +35,8 @@ def transcribe_segment(
     Returns list of (start_sec, end_sec, text) tuples for subtitle rendering.
     Returns empty list if no speech detected or whisper is unavailable.
     """
-    model = _get_model()
     try:
+        model = _get_model()
         result = model.transcribe(
             str(video_path),
             language="en",
