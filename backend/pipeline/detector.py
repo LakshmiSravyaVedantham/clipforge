@@ -23,7 +23,7 @@ class Scene:
         return self.end_sec - self.start_sec
 
 
-def _run_detector(path: Path) -> list:
+def _run_detector(path: Path) -> List[tuple]:
     """Run PySceneDetect on the video file. Separated for testability."""
     if not _SCENEDETECT_AVAILABLE:
         raise RuntimeError(
@@ -37,11 +37,15 @@ def _run_detector(path: Path) -> list:
 
 
 def detect_scenes(path: Path, min_duration: float = 1.5) -> List[Scene]:
-    """Detect scene boundaries. Returns scenes longer than min_duration seconds."""
+    """Detect scene boundaries. Returns scenes longer than min_duration seconds.
+
+    Zero-duration scenes (PySceneDetect artifacts) are always excluded.
+    min_duration is inclusive: a scene of exactly min_duration seconds is included.
+    """
     raw = _run_detector(path)
     scenes = []
     for start, end in raw:
         s = Scene(start_sec=start.get_seconds(), end_sec=end.get_seconds())
-        if s.duration >= min_duration:
+        if s.duration > 0 and s.duration >= min_duration:
             scenes.append(s)
     return scenes

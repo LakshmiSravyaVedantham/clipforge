@@ -39,3 +39,22 @@ def test_scene_duration_property():
     """Scene.duration should return end - start."""
     s = Scene(start_sec=2.5, end_sec=8.0)
     assert s.duration == pytest.approx(5.5)
+
+
+def test_detect_scenes_empty_input():
+    """Empty scene list from detector should return empty list."""
+    with patch("pipeline.detector._run_detector", return_value=[]):
+        result = detect_scenes(Path("fake.mp4"))
+    assert result == []
+
+
+def test_detect_scenes_includes_exact_min_duration():
+    """Scene with duration exactly equal to min_duration should be included (>= boundary)."""
+    start_mock = MagicMock()
+    start_mock.get_seconds.return_value = 0.0
+    end_mock = MagicMock()
+    end_mock.get_seconds.return_value = 1.5  # exactly min_duration
+    with patch("pipeline.detector._run_detector", return_value=[(start_mock, end_mock)]):
+        result = detect_scenes(Path("fake.mp4"), min_duration=1.5)
+    assert len(result) == 1
+    assert result[0].duration == pytest.approx(1.5)
