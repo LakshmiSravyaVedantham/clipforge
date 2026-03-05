@@ -22,8 +22,15 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install fastapi uvicorn[standard] python-multipart aiofiles \
-            numpy pytest pytest-cov
+          pip install \
+            fastapi==0.115.0 \
+            uvicorn[standard]==0.30.0 \
+            python-multipart==0.0.9 \
+            aiofiles==23.2.1 \
+            librosa==0.10.2 \
+            numpy \
+            pytest \
+            pytest-cov
 
       - name: Run tests
         run: |
