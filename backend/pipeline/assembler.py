@@ -26,6 +26,8 @@ YOUTUBE_W, YOUTUBE_H = 1920, 1080  # 16:9 horizontal
 TRAILER_MAX_SEC = 90
 YOUTUBE_MAX_SEC = 600  # 10 min
 TIKTOK_MAX_SEC = 60
+YOUTUBE_MAX_CLIPS = 8
+TRAILER_MAX_CLIPS = 8
 
 
 def _require_moviepy() -> None:
@@ -42,7 +44,6 @@ def _crop_vertical(clip):
 
 def _add_captions(clip, subs: list, offset: float):
     """Overlay subtitle TextClips onto the video clip."""
-    from pipeline.captions import transcribe_segment  # avoid circular at module level
     overlays = [clip]
     for start, end, text in subs:
         t_start = max(0.0, start - offset)
@@ -87,7 +88,7 @@ def _make_youtube(source: "VideoFileClip", highlights: List[ScoredScene], job_di
     """Top moments concatenated, capped at 10 minutes."""
     clips = []
     total = 0.0
-    for h in highlights[:8]:
+    for h in highlights[:YOUTUBE_MAX_CLIPS]:
         dur = min(h.duration, 90.0)
         if total + dur > YOUTUBE_MAX_SEC:
             break
@@ -110,7 +111,7 @@ def _make_trailer(source: "VideoFileClip", highlights: List[ScoredScene], job_di
     """Cinematic trailer: fast cuts then slow-mo climax, capped at 90s."""
     clips = []
     # Fast cuts from lower-ranked highlights
-    for h in highlights[3:8]:
+    for h in highlights[1:TRAILER_MAX_CLIPS]:
         dur = min(h.duration, 6.0)
         clips.append(source.subclip(h.start_sec, h.start_sec + dur))
     # Slow-mo climax from top highlight
@@ -142,6 +143,7 @@ def assemble_all(input_path: Path, highlights: List[ScoredScene], job_id: str) -
     job_dir.mkdir(exist_ok=True)
 
     source = VideoFileClip(str(input_path))
+    tiktok = youtube = trailer = None  # initialize so cleanup never hits NameError
     try:
         tiktok = _make_tiktok(source, highlights[0], job_dir)
         youtube = _make_youtube(source, highlights, job_dir)
@@ -151,12 +153,16 @@ def assemble_all(input_path: Path, highlights: List[ScoredScene], job_id: str) -
 
     zip_path = input_path.parent / f"{job_id}_output.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(tiktok, "tiktok.mp4")
-        zf.write(youtube, "youtube.mp4")
-        zf.write(trailer, "trailer.mp4")
+        if tiktok and tiktok.exists():
+            zf.write(tiktok, "tiktok.mp4")
+        if youtube and youtube.exists():
+            zf.write(youtube, "youtube.mp4")
+        if trailer and trailer.exists():
+            zf.write(trailer, "trailer.mp4")
 
     for f in [tiktok, youtube, trailer]:
-        f.unlink(missing_ok=True)
+        if f:
+            f.unlink(missing_ok=True)
     shutil.rmtree(job_dir, ignore_errors=True)
 
     return zip_path
