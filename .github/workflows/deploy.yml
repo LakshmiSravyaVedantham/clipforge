@@ -19,7 +19,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           cd backend
-          railway up --service clipforge-backend --detach
+          railway up --detach
 
   deploy-frontend:
     name: Deploy Frontend → Vercel
