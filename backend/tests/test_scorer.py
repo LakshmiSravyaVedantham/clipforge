@@ -40,6 +40,26 @@ def test_score_scenes_respects_top_k():
     assert len(result) == 3
 
 
+def test_score_scenes_sorts_by_energy():
+    """Higher-energy audio segments should rank above silent segments."""
+    sr = 22050
+    # First 5s: loud sine wave (high energy)
+    # Last 5s: silence (zero energy)
+    loud = np.sin(2 * np.pi * 440 * np.linspace(0, 5, 5 * sr)) * 0.9
+    silent = np.zeros(5 * sr)
+    audio = np.concatenate([loud, silent])
+
+    scenes = [Scene(0.0, 5.0), Scene(5.0, 10.0)]  # loud first, silent second
+
+    with patch("pipeline.scorer._load_audio", return_value=(audio, sr)):
+        result = score_scenes(Path("fake.mp4"), scenes)
+
+    # Loud scene should rank #1 (higher RMS = higher score)
+    assert result[0].start_sec == 0.0
+    assert result[1].start_sec == 5.0
+    assert result[0].score > result[1].score
+
+
 def test_scored_scene_properties():
     """ScoredScene properties should delegate to wrapped Scene."""
     scene = Scene(start_sec=2.0, end_sec=7.0)

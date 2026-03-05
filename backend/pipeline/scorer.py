@@ -47,10 +47,6 @@ def _load_audio(path: Path) -> Tuple[np.ndarray, int]:
 
 def _rms_score(y: np.ndarray, sr: int, start: float, end: float) -> float:
     """Mean RMS energy of an audio segment. Higher = more exciting."""
-    if not _LIBROSA_AVAILABLE:
-        raise RuntimeError(
-            "librosa not installed. Run: pip install librosa"
-        )
     start_sample = int(start * sr)
     end_sample = int(end * sr)
     segment = y[start_sample:end_sample]
